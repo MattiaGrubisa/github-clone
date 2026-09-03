@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS repositories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
     is_private BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(owner_id, name)
