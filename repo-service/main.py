@@ -15,7 +15,7 @@ ALGORITHM = "HS256"
 security = HTTPBearer()
 
 def get_db_connection():
-    return psycopg2.conect(DATABASE_URL)
+    return psycopg2.connect(DATABASE_URL)
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
@@ -23,16 +23,16 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     except JWTError:
         raise HTTPException(status_code = 401, detail = "Invalid or expired token")
 
-    return {id: payload["sub"], "username": payload["username"]}
+    return {"id": payload["sub"], "username": payload["username"]}
 
 class RepositoryCreate(BaseModel):
     name: str
     description: str | None = None
-    is_privete: bool = False
+    is_private: bool = False
 
 class RepositoryUpdate(BaseModel):
     description: str | None = None
-    is_privete: bool = False
+    is_private: bool = False
 
 @app.get("/healt")
 def health_check():
@@ -53,13 +53,22 @@ def create_repo(data: RepositoryCreate, user: dict = Depends(get_current_user)):
                 "VALUES (%s, %s, %s, %s) RETURNING id, created_at",
                 (data.name, data.description, user["id"], data.is_private),
             )
-            repo_id, create_at = cur.fetchone()
+            repo_id, created_at = cur.fetchone()
         con.commit()
     except psycopg2.errors.UniqueViolation:
         con.rollback()
         raise HTTPException(status_code = 409, detail = "Repository with that name already exists")
     finally:
         con.close()
+
+    return {
+        "id": str(repo_id),
+        "name": data.name,
+        "description": data.description,
+        "is_private": data.is_private,
+        "owner": user["username"],
+        "create_at": created_at
+    }
 
 @app.get("/repositories")
 def list_repos(user: dict = Depends(get_current_user)):
