@@ -34,7 +34,7 @@ class RepositoryUpdate(BaseModel):
     description: str | None = None
     is_private: bool = False
 
-@app.get("/healt")
+@app.get("/health")
 def health_check():
     try:
         con = get_db_connection()
