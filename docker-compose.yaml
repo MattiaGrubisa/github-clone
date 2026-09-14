@@ -23,8 +23,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    ports:
-      - "8001:8000"
 
   repo-service:
     build: ./repo-service
@@ -34,8 +32,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-    ports:
-      - "8002:8000"
 
   git-service:
     build: ./git-service
@@ -43,8 +39,6 @@ services:
       SECRET_KEY: ${SECRET_KEY}
     volumes:
       - git-data:/repos
-    ports:
-      - "8003:8000"
 
   gateway:
     image: nginx:alpine
