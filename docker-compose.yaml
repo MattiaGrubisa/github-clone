@@ -1,16 +1,58 @@
 services:
 
-  database:
+  db-primary:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--wal-segsize=16"
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=5
+      -c max_replication_slots=5
+      -c hot_standby=on
     volumes:
-      - db-data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db-primary-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./db/replication.sh:/docker-entrypoint-initdb.d/02-replication.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-replica:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      PGUSER: replicator
+      PGPASSWORD: ${REPLICATION_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    user: postgres
+    command: |
+      bash -c "
+      if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
+        rm -rf /var/lib/postgresql/data/*
+        until pg_basebackup -h db-primary -D /var/lib/postgresql/data -U replicator -R -w; do
+          echo 'Waiting for primary...'
+          sleep 2
+        done
+        chmod 0700 /var/lib/postgresql/data
+      fi
+      postgres
+      "
+    volumes:
+      - db-replica-data:/var/lib/postgresql/data
+    depends_on:
+      db-primary:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,7 +61,7 @@ services:
     build: ./auth-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-primary:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -28,14 +70,14 @@ services:
       retries: 3
       start_period: 10s
     depends_on:
-      database:
+      db-primary:
         condition: service_healthy
 
   repo-service:
     build: ./repo-service
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db-primary:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -44,7 +86,7 @@ services:
       retries: 3
       start_period: 10s
     depends_on:
-      database:
+      db-primary:
         condition: service_healthy
 
   git-service:
@@ -73,5 +115,6 @@ services:
       - git-service
 
 volumes:
-  db-data:
+  db-primary-data:
+  db-replica-data:
   git-data:
