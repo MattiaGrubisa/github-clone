@@ -1,7 +1,7 @@
 import os
-from datetime import datetime, timedelta, timezone
-
 import psycopg2
+
+from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, EmailStr
 from jose import jwt
