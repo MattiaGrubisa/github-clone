@@ -8,11 +8,14 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from pydantic import BaseModel
 
+import httpx
+
 app = FastAPI(title = "Git Service")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 REPOS_ROOT = Path("/repos")
+REPO_SERVICE_URL = os.getenv("REPO_SERVICE_URL", "http://repo-service:8000")
 
 security = HTTPBearer()
 
@@ -33,6 +36,33 @@ def repo_path(repo_id: str) -> Path:
         raise HTTPException(status_code = 400, detail = "Invalid repository id")
     return path
 
+def check_repo_access(repo_id: str, token: str, need_write: bool = False) -> None:
+    url = f"{REPO_SERVICE_URL}/internal/repositories/{repo_id}/access"
+
+    try:
+        response = httpx.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=3.0,
+        )
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=503,
+            detail="Authorization service unavailable",
+        )
+
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=503, detail="Authorization check failed")
+
+    permissions = response.json()
+    allowed = permissions["can_write"] if need_write else permissions["can_read"]
+
+    if not allowed:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
 @app.get("/health")
 def health_check():
     if not REPOS_ROOT.exists():
@@ -40,7 +70,8 @@ def health_check():
     return {"status": "healthy", "storage": "available"}
 
 @app.post("/repos/init", status_code=201)
-def init_repository(data: InitRequest, user: dict = Depends(get_current_user)):
+def init_repository(data: InitRequest, user: dict = Depends(get_current_user), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    check_repo_access(data.repo_id, credentials.credentials, need_write = True)
     path = repo_path(data.repo_id)
 
     if path.exists():
@@ -55,7 +86,8 @@ def init_repository(data: InitRequest, user: dict = Depends(get_current_user)):
     return {"repo_id": data.repo_id, "initialized": True}
 
 @app.get("/repos/{repo_id}/branches")
-def list_branches(repo_id: str, user: dict = Depends(get_current_user)):
+def list_branches(repo_id: str, user: dict = Depends(get_current_user), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    check_repo_access(repo_id, credentials.credentials)
     path = repo_path(repo_id)
     
     if not path.exists():
@@ -68,7 +100,8 @@ def list_branches(repo_id: str, user: dict = Depends(get_current_user)):
     ]
 
 @app.get("/repos/{repo_id}/commits")
-def list_commits(repo_id: str, branch: str = "master", limit: int = 20, user: dict = Depends(get_current_user)):
+def list_commits(repo_id: str, branch: str = "master", limit: int = 20, user: dict = Depends(get_current_user), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    check_repo_access(repo_id, credentials.credentials)
     path = repo_path(repo_id)
 
     if not path.exists():
@@ -90,7 +123,8 @@ def list_commits(repo_id: str, branch: str = "master", limit: int = 20, user: di
     ]
 
 @app.get("/repos/{repo_id}/tree")
-def list_tree(repo_id: str, branch: str = "master", path_prefix: str = "", user: dict = Depends(get_current_user)):
+def list_tree(repo_id: str, branch: str = "master", path_prefix: str = "", user: dict = Depends(get_current_user), credentials: HTTPAuthorizationCredentials = Depends(security)):
+    check_repo_access(repo_id, credentials.credentials)
     path = repo_path(repo_id)
 
     if not path.exists():

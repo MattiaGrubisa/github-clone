@@ -95,6 +95,7 @@ services:
     restart: unless-stopped
     environment:
       SECRET_KEY: ${SECRET_KEY}
+      REPO_SERVICE_URL: http://repo-service:8000
     volumes:
       - git-data:/repos
     healthcheck:

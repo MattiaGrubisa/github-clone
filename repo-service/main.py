@@ -14,7 +14,7 @@ ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
-def get_db_connection():
+def get_db_conection():
     return psycopg2.connect(DATABASE_URL)
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
@@ -37,7 +37,7 @@ class RepositoryUpdate(BaseModel):
 @app.get("/health")
 def health_check():
     try:
-        con = get_db_connection()
+        con = get_db_conection()
         con.close()
         return {"status": "healthy", "databese": "conected"}
     except Exception:
@@ -45,7 +45,7 @@ def health_check():
 
 @app.post("/repositories", status_code = 201)
 def create_repo(data: RepositoryCreate, user: dict = Depends(get_current_user)):
-    con = get_db_connection()
+    con = get_db_conection()
     try:
         with con.cursor() as cur:
             cur.execute(
@@ -72,7 +72,7 @@ def create_repo(data: RepositoryCreate, user: dict = Depends(get_current_user)):
 
 @app.get("/repositories")
 def list_repos(user: dict = Depends(get_current_user)):
-    con = get_db_connection()
+    con = get_db_conection()
     try:
         with con.cursor() as cur:
             cur.execute(
@@ -97,7 +97,7 @@ def list_repos(user: dict = Depends(get_current_user)):
 
 @app.get("/repositories/{repo_ide}")
 def get_repo(repo_id: str, user: dict = Depends(get_current_user)):
-    con = get_db_connection()
+    con = get_db_conection()
     try:
         with con.cursor() as cur:
             cur.execute(
@@ -132,7 +132,7 @@ def update_repo(repo_id: str, data: RepositoryUpdate, user: dict = Depends(get_c
     assignments = ", ".join(f"{key} = %s" for key in fields)
     values = list(fields.values()) + [repo_id, user["id"]]
 
-    con = get_db_connection()
+    con = get_db_conection()
     try:
         with con.cursor() as cur:
             cur.execute(
@@ -152,17 +152,41 @@ def update_repo(repo_id: str, data: RepositoryUpdate, user: dict = Depends(get_c
 
 @app.delete("/repositories/{repo_id}", status_code = 204)
 def delete_repository(repo_id: str, user: dict = Depends(get_current_user)):
-    conn = get_db_connection()
+    con = get_db_conection()
     try:
-        with conn.cursor() as cur:
+        with con.cursor() as cur:
             cur.execute(
                 "DELETE FROM repositories WHERE id = %s AND owner_id = %s RETURNING id",
                 (repo_id, user["id"]),
             )
             row = cur.fetchone()
-        conn.commit()
+        con.commit()
     finally:
-        conn.close()
+        con.close()
 
     if row is None:
         raise HTTPException(status_code = 404, detail = "Repository not found")
+
+@app.get("/internal/repositories/{repo_id}/access")
+def check_access(repo_id: str, user: dict = Depends(get_current_user)):
+    con = get_db_conection()
+    try:
+        with con.cursor() as cur:
+            cur.execute(
+                "SELECT owner_id, is_private FROM repositories WHERE id = %s",
+                (repo_id,),
+            )
+            row = cur.fetchone()
+    finally:
+        con.close()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Repository not found")
+
+    is_owner = str(row[0]) == user["id"]
+    is_private = row[1]
+
+    return {
+        "can_read": is_owner or not is_private,
+        "can_write": is_owner,
+    }
