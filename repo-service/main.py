@@ -95,7 +95,7 @@ def list_repos(user: dict = Depends(get_current_user)):
         for row in rows
     ]
 
-@app.get("/repositories/{repo_ide}")
+@app.get("/repositories/{repo_id}")
 def get_repo(repo_id: str, user: dict = Depends(get_current_user)):
     con = get_db_conection()
     try:
