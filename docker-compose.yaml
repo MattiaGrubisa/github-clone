@@ -96,6 +96,7 @@ services:
     environment:
       SECRET_KEY: ${SECRET_KEY}
       REPO_SERVICE_URL: http://repo-service:8000
+      TIMING: ${TIMING:-0}
     volumes:
       - git-data:/repos
     healthcheck:

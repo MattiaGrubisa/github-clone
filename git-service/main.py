@@ -20,6 +20,7 @@ REPOS_ROOT = Path("/repos")
 REPO_SERVICE_URL = os.getenv("REPO_SERVICE_URL", "http://repo-service:8000")
 MAX_RETRIES = 3
 BASE_DELAY_MS = 100
+TIMING = os.getenv("TIMING") == "1"
 
 security = HTTPBearer()
 http_client = httpx.AsyncClient(timeout=3.0)
@@ -49,13 +50,15 @@ async def check_repo_access(repo_id: str, token: str, need_write: bool = False) 
         try:
             response = await http_client.get(url, headers={"Authorization": f"Bearer {token}"})
         except httpx.RequestError:
-            print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms - connection error", flush=True)
+            if TIMING:
+                print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms - connection error", flush=True)
             if attempt == MAX_RETRIES:
                 raise HTTPException(status_code=503, detail="Authorization service unavailable")
             await asyncio.sleep(BASE_DELAY_MS * (2 ** (attempt - 1)) / 1000)
             continue
 
-        print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
+        if TIMING:
+            print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
 
         if response.status_code == 503:
             if attempt == MAX_RETRIES:
@@ -99,7 +102,8 @@ async def init_repository(data: InitRequest, user: dict = Depends(get_current_us
     except git.GitCommandError:
         shutil.rmtree(path, ignore_errors=True)
         raise HTTPException(status_code=500, detail="Failed to initialize repository")
-    print(f"[timing] git init: {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
+    if TIMING:
+        print(f"[timing] git init: {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
     return {"repo_id": data.repo_id, "initialized": True}
 
 def read_branches(path: Path) -> list[dict]:
