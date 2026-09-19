@@ -88,6 +88,13 @@ def health_check():
         raise HTTPException(status_code = 503, detail = "Storage unavailable.")
     return {"status": "healthy", "storage": "available"}
 
+def init_bare_repo(path: Path) -> None:
+    repo = git.Repo.init(path, bare=True)
+    hook = path / "hooks" / "post-update"
+    shutil.copyfile(path / "hooks" / "post-update.sample", hook)
+    hook.chmod(0o755)
+    repo.git.update_server_info()
+
 @app.post("/repos/init", status_code=201)
 async def init_repository(data: InitRequest, user: dict = Depends(get_current_user), credentials: HTTPAuthorizationCredentials = Depends(security)):
     await check_repo_access(data.repo_id, credentials.credentials, need_write = True)
@@ -98,7 +105,7 @@ async def init_repository(data: InitRequest, user: dict = Depends(get_current_us
 
     start = time.monotonic_ns()
     try:
-        await asyncio.to_thread(git.Repo.init, path, bare=True)
+        await asyncio.to_thread(init_bare_repo, path)
     except git.GitCommandError:
         shutil.rmtree(path, ignore_errors=True)
         raise HTTPException(status_code=500, detail="Failed to initialize repository")

@@ -98,7 +98,7 @@ services:
       REPO_SERVICE_URL: http://repo-service:8000
       TIMING: ${TIMING:-0}
     volumes:
-      - git-data:/repos
+      - ./repos-data:/repos
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -112,6 +112,7 @@ services:
       - "8080:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf
+      - ./repos-data:/repos:ro
     depends_on:
       - auth-service
       - repo-service
@@ -120,4 +121,3 @@ services:
 volumes:
   db-primary-data:
   db-replica-data:
-  git-data:
