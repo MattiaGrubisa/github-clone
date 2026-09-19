@@ -85,7 +85,7 @@ async def check_repo_access(repo_id: str, token: str, need_write: bool = False) 
 @app.get("/health")
 def health_check():
     if not REPOS_ROOT.exists():
-        raise HTTPException(status_code = 503, detail = "Database disconnected.")
+        raise HTTPException(status_code = 503, detail = "Storage unavailable.")
     return {"status": "healthy", "storage": "available"}
 
 @app.post("/repos/init", status_code=201)
