@@ -153,6 +153,6 @@ Za ispis vremena pojedinih koraka postaviti `TIMING=1` u `.env` i ponovno pokren
 
 - Nema `git push` ni kloniranja preko HTTP-a. Repozitorij se može inicijalizirati i čitati, ali sadržaj se u njega ne može poslati kroz API.
 - Replika se ne koristi za čitanje i nema automatskog failovera. Ako primarna baza padne, servisi ne prelaze sami na repliku.
-- Docker ponovno pokreće kontejner samo kad proces padne, ne i kad je health check neuspješan.
+- Neuspješan health check ne pokreće ponovno kontejner. `restart: unless-stopped` reagira samo na pad procesa, a Docker Compose nema orkestrator koji bi gledao health status. Za to bi trebao vanjski nadzorni servis s pristupom docker socketu, koji ovdje nije napravljen.
 - `repo-service` i `auth-service` otvaraju novu konekciju prema bazi za svaki zahtjev.
 - Brisanje repozitorija u `repo-serviceu` ne briše git repozitorij s diska.

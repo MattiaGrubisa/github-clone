@@ -35,7 +35,7 @@ def health_check():
         connection.close()
         return {"status" : "healthy", "database" : "connected"}
     except Exception:
-        return {"status" : "unhealthy", "database" : "disconnected"}
+        raise HTTPException(status_code = 503, detail = "Database disconnected.")
 
 def create_access_token(user_id: str, username: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes = TOKEN_EXPIRE_MINUTES)

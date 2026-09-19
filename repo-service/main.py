@@ -41,7 +41,7 @@ def health_check():
         con.close()
         return {"status": "healthy", "databese": "conected"}
     except Exception:
-        return {"status": "unhealthy", "databse": "disconected"}
+        raise HTTPException(status_code = 503, detail = "Database disconnected.")
 
 @app.post("/repositories", status_code = 201)
 def create_repo(data: RepositoryCreate, user: dict = Depends(get_current_user)):
