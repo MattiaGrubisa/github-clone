@@ -56,6 +56,27 @@ Napomene:
 - `db/init.sql` se izvršava samo kad je volumen baze prazan, `docker compose down -v` briše sve podatke
 - `db/replication.sh` mora imati LF završetke redova (riješeno kroz `.gitattributes`)
 
+## Pregled baze
+
+Baza nije izložena prema van, pristupa joj se kroz kontejner:
+
+```bash
+docker compose exec db-primary psql -U <POSTGRES_USER> -d <POSTGRES_DB>
+```
+
+Korisne naredbe unutar `psql`: `\dt` za popis tablica, `\d users` za strukturu tablice, `\x` za okomiti ispis, `\q` za izlaz. Rola `postgres` u ovoj bazi ne postoji, pa korisnik i baza moraju biti navedeni izričito.
+
+Jednokratni upit bez ulaska u `psql`:
+
+```bash
+docker compose exec db-primary sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT id, username, email, created_at FROM repositories;"'
+```
+
+```bash
+docker compose exec db-primary sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT id, name, owner_id, is_private, created_at FROM repositories;"'
+```
+Isti upit nad `db-replica` pokazuje da replikacija radi. Replika je u stanju oporavka i prima samo čitanje.
+
 ## API
 
 Svi endpointi osim registracije i prijave traže zaglavlje `Authorization: Bearer <token>`.
@@ -88,27 +109,26 @@ Privatni repozitorij tuđem korisniku vraća `404`, a ne `403`, da se ne otkrije
 | GET | `/api/repos/{id}/commits?branch=master&limit=20` | commitovi na grani |
 | GET | `/api/repos/{id}/tree?branch=master&path_prefix=` | sadržaj direktorija |
 
-### Primjer
+### Clone i pull
+
+Bare repozitoriji se poslužuju statički na `/git/{id}`, pa se mogu klonirati i povlačiti običnim gitom:
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"ana","email":"ana@example.com","password":"lozinka"}'
-
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"ana","password":"lozinka"}' | jq -r .access_token)
-
-REPO_ID=$(curl -s -X POST http://localhost:8080/api/repositories \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"name":"test","is_private":true}' | jq -r .id)
-
-curl -X POST http://localhost:8080/api/repos/init \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d "{\"repo_id\":\"$REPO_ID\"}"
-
-curl http://localhost:8080/api/repos/$REPO_ID/branches -H "Authorization: Bearer $TOKEN"
+git clone http://localhost:8080/git/<repo_id> proba
 ```
+
+To je gitov „dumb” HTTP protokol: nginx samo poslužuje datoteke iz repozitorija, a git klijent sam slaže objekte. Datoteke `info/refs` i `objects/info/packs`, koje dumb protokol traži, održava hook `post-update` koji se postavlja pri `/api/repos/init`.
+
+### Push
+
+Push ne ide preko HTTP-a. Bare repozitoriji stoje u folderu `repos-data/`, pa se u njih piše izravno, s lokalnom putanjom kao remoteom:
+
+```bash
+git remote add origin ./repos-data/<repo_id>
+git push origin master
+```
+
+To je gitov lokalni transport, a ne mrežni protokol, pa radi samo s računala na kojem servis stoji. Grana mora biti `master`, jer je to zadana vrijednost parametra `branch` na git rutama.
 
 ## Otpornost i skaliranje
 
@@ -151,8 +171,10 @@ Za ispis vremena pojedinih koraka postaviti `TIMING=1` u `.env` i ponovno pokren
 
 ## Ograničenja
 
-- Nema `git push` ni kloniranja preko HTTP-a. Repozitorij se može inicijalizirati i čitati, ali sadržaj se u njega ne može poslati kroz API.
+- Nema `git push` preko HTTP-a. Sadržaj se u repozitorij ne može poslati kroz API; kloniranje i povlačenje rade kroz dumb HTTP.
+- Ruta `/git/` nema autentikaciju. Poslužuje sadržaj svih repozitorija, uključujući privatne, pa ih može klonirati svatko tko zna `id`. Provjera prava pristupa vrijedi samo za `/api/` rute. Statičko posluživanje ne može provjeriti JWT, a git klijent ga ionako ne šalje.
 - Replika se ne koristi za čitanje i nema automatskog failovera. Ako primarna baza padne, servisi ne prelaze sami na repliku.
 - Neuspješan health check ne pokreće ponovno kontejner. `restart: unless-stopped` reagira samo na pad procesa, a Docker Compose nema orkestrator koji bi gledao health status. Za to bi trebao vanjski nadzorni servis s pristupom docker socketu, koji ovdje nije napravljen.
+- Gateway pri pokretanju razrješava imena svih servisa iz `upstream` blokova. Ako neki servis nije pokrenut, nginx se odbija pokrenuti uz `host not found in upstream`, pa pad jednog servisa sprječava podizanje ulazne točke. Dok već radi, nedostupan servis tretira kroz `max_fails` i ne ruši se.
 - `repo-service` i `auth-service` otvaraju novu konekciju prema bazi za svaki zahtjev.
 - Brisanje repozitorija u `repo-serviceu` ne briše git repozitorij s diska.
