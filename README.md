@@ -6,7 +6,7 @@ Korisnik se može registrirati i prijaviti, kreirati repozitorije (javne ili pri
 
 ## Arhitektura
 
-![image info](./Docs/Arhitecture.png)
+![Arhitektura sustava](./Docs/arhitektura.svg)
 
 
 | Servis | Zadatak | Tehnologija |
@@ -69,7 +69,7 @@ Korisne naredbe unutar `psql`: `\dt` za popis tablica, `\d users` za strukturu t
 Jednokratni upit bez ulaska u `psql`:
 
 ```bash
-docker compose exec db-primary sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT id, username, email, created_at FROM repositories;"'
+docker compose exec db-primary sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT id, username, email, created_at FROM users;"'
 ```
 
 ```bash

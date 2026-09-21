@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 712" width="980" height="712" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="980" height="712" fill="#ffffff"/>
+
+  <!-- klijent -->
+  <rect x="40" y="40" width="120" height="46" rx="6" fill="#f6f7f9" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="100" y="69" text-anchor="middle" font-size="14" fill="#1f2328">Klijent</text>
+  <line x1="160" y1="63" x2="299" y2="63" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- gateway -->
+  <rect x="305" y="30" width="320" height="66" rx="6" fill="#eef2f7" stroke="#5b7ba0" stroke-width="1.4"/>
+  <text x="465" y="58" text-anchor="middle" font-size="15" fill="#1f2328">Gateway — nginx</text>
+  <text x="465" y="78" text-anchor="middle" font-size="11.5" fill="#57606a">:8080 · rutiranje · rate limiting</text>
+
+  <!-- sabirnica prema servisima -->
+  <path d="M465,96 V140" fill="none" stroke="#57606a" stroke-width="1.5"/>
+  <path d="M145,140 H785" fill="none" stroke="#57606a" stroke-width="1.5"/>
+  <path d="M145,140 V189" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <path d="M465,140 V189" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <path d="M785,140 V189" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <text x="153" y="168" font-size="11" fill="#57606a">/api/auth/*</text>
+  <text x="457" y="168" text-anchor="end" font-size="11" fill="#57606a">/api/repositories/*</text>
+  <text x="793" y="168" font-size="11" fill="#57606a">/api/repos/*</text>
+
+  <!-- servisi -->
+  <rect x="40" y="190" width="210" height="70" rx="6" fill="#f6f7f9" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="145" y="217" text-anchor="middle" font-size="14" fill="#1f2328">Auth Service</text>
+  <text x="145" y="237" text-anchor="middle" font-size="11" fill="#57606a">registracija, prijava</text>
+  <text x="145" y="251" text-anchor="middle" font-size="11" fill="#57606a">izdaje JWT</text>
+
+  <rect x="360" y="190" width="210" height="70" rx="6" fill="#f6f7f9" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="465" y="217" text-anchor="middle" font-size="14" fill="#1f2328">Repository Service</text>
+  <text x="465" y="237" text-anchor="middle" font-size="11" fill="#57606a">metapodaci repozitorija</text>
+  <text x="465" y="251" text-anchor="middle" font-size="11" fill="#57606a">prava pristupa</text>
+
+  <rect x="680" y="190" width="210" height="70" rx="6" fill="#f6f7f9" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="785" y="217" text-anchor="middle" font-size="14" fill="#1f2328">Git Service</text>
+  <text x="785" y="237" text-anchor="middle" font-size="11" fill="#57606a">bare repozitoriji</text>
+  <text x="785" y="251" text-anchor="middle" font-size="11" fill="#57606a">grane, commitovi, tree</text>
+
+  <!-- git -> repo -->
+  <path d="M680,234 H571" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <text x="625" y="209" text-anchor="middle" font-size="11" fill="#57606a">provjera prava</text>
+  <text x="625" y="222" text-anchor="middle" font-size="11" fill="#57606a">retry 3×</text>
+
+  <!-- servisi -> baza -->
+  <path d="M145,260 V370 H260 V399" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <path d="M465,260 V370 H380 V399" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+
+  <!-- git -> volumen -->
+  <path d="M785,260 V399" fill="none" stroke="#57606a" stroke-width="1.5" marker-end="url(#arw)"/>
+  <text x="795" y="335" font-size="11" fill="#57606a">čita i piše</text>
+
+  <!-- gateway -> volumen, staticki -->
+  <path d="M625,63 H950 V430 H891" fill="none" stroke="#57606a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arw)"/>
+  <text x="938" y="250" text-anchor="middle" font-size="11" fill="#57606a" transform="rotate(-90 938 250)">/git/* — statički, bez auth</text>
+
+  <!-- baza -->
+  <rect x="200" y="400" width="240" height="60" rx="6" fill="#f0f0ee" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="320" y="425" text-anchor="middle" font-size="14" fill="#1f2328">DB-Primary</text>
+  <text x="320" y="444" text-anchor="middle" font-size="11" fill="#57606a">PostgreSQL 15 · čitanje i pisanje</text>
+
+  <path d="M320,460 V504" fill="none" stroke="#57606a" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arw)"/>
+  <text x="332" y="478" font-size="11" fill="#57606a">WAL streaming</text>
+  <text x="332" y="492" font-size="11" fill="#57606a">asinkrono</text>
+
+  <rect x="200" y="505" width="240" height="60" rx="6" fill="#f0f0ee" stroke="#8a8f98" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="320" y="530" text-anchor="middle" font-size="14" fill="#1f2328">DB-Replica</text>
+  <text x="320" y="549" text-anchor="middle" font-size="11" fill="#57606a">topla kopija · samo čitanje</text>
+
+  <!-- volumen -->
+  <rect x="680" y="400" width="210" height="60" rx="6" fill="#f7f4ee" stroke="#8a8f98" stroke-width="1.2"/>
+  <text x="785" y="425" text-anchor="middle" font-size="14" fill="#1f2328">repos-data/</text>
+  <text x="785" y="444" text-anchor="middle" font-size="11" fill="#57606a">volumen, bare git repozitoriji</text>
+
+  <!-- napomene -->
+  <line x1="40" y1="600" x2="940" y2="600" stroke="#d8dbe0" stroke-width="1"/>
+  <text x="40" y="623" font-size="11.5" fill="#1f2328">Git Service nema pristup bazi. Prava pristupa traži od Repository Servicea: GET /internal/repositories/{id}/access — do 3 ponavljanja (100 ms, 200 ms),</text>
+  <text x="40" y="640" font-size="11.5" fill="#1f2328">samo kod mrežne greške ili 503. Poziv je čitanje, pa je ponavljanje bez nuspojava.</text>
+  <text x="40" y="664" font-size="11.5" fill="#1f2328">Ruta /git/* poslužuje repozitorije statički, bez provjere tokena, pa git clone i pull rade običnim gitom. Push preko HTTP-a ne postoji.</text>
+  <text x="40" y="688" font-size="11.5" fill="#1f2328">Replika se ne koristi za čitanje i nema automatskog failovera. Isprekidana linija označava promet koji ne ide kroz HTTP API servisa.</text>
+</svg>
