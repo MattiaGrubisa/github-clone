@@ -51,19 +51,19 @@ async def check_repo_access(repo_id: str, token: str, need_write: bool = False) 
             response = await http_client.get(url, headers={"Authorization": f"Bearer {token}"})
         except httpx.RequestError:
             if TIMING:
-                print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms - connection error", flush=True)
+                print(f"[timing] access check (attempt {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms - connection error", flush=True)
             if attempt == MAX_RETRIES:
                 raise HTTPException(status_code=503, detail="Authorization service unavailable")
             await asyncio.sleep(BASE_DELAY_MS * (2 ** (attempt - 1)) / 1000)
             continue
 
         if TIMING:
-            print(f"[timing] provjera pristupa (pokušaj {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
+            print(f"[timing] access check (attempt {attempt}): {(time.monotonic_ns() - start) / 1_000_000:.2f} ms", flush=True)
 
         if response.status_code == 503:
             if attempt == MAX_RETRIES:
                 raise HTTPException(status_code=503, detail="Authorization check failed")
-            print(f"[retry] pokušaj {attempt}/{MAX_RETRIES} nakon 503", flush=True)
+            print(f"[retry] attempt {attempt}/{MAX_RETRIES} after 503", flush=True)
             await asyncio.sleep(BASE_DELAY_MS * (2 ** (attempt - 1)) / 1000)
             continue
 
